@@ -47,10 +47,12 @@ logging.basicConfig(filename="sqlinjfindx.log", level=logging.INFO,
 # Thread Queue for concurrent scanning
 queue = Queue()
 
+from termcolor import colored
+
 def print_banner():
-    banner = '''
+    banner = r'''
     ========================================
-    sqlinjfindx - SQL Injection Scanner v1.1
+    sqlinjfindx - SQL Injection Scanner v1.2
 
              _  _           _   __  _             _       
             | |(_)         (_) / _|(_)           | |      
@@ -60,11 +62,11 @@ def print_banner():
 |___/ \__, ||_||_||_| |_|  | ||_|  |_||_| |_| \__,_|/_/\_\
          | |              _/ |                            
          |_|             |__/                             
-
-                                                                                                                                                                                                                     
     ========================================
     '''
     print(colored(banner, 'green'))
+
+print_banner()
 
 def scan_for_sql_injection(url, method, params, headers, blind=False, verbose=False):
     vulnerable = False

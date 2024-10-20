@@ -5,4 +5,3 @@ sqlinjfindx is a Python-based tool designed to identify SQL injection vulnerabil
 Features
 SQL Injection Detection: Detects both regular and blind SQL injection vulnerabilities using pre-defined payloads.
 
---help for commands
