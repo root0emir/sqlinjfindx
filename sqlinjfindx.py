@@ -2,13 +2,11 @@ import requests
 import argparse
 import re
 import random
-import time
 import logging
 import threading
 import json
 import csv
-import os
-from queue import Queue
+from concurrent.futures import ThreadPoolExecutor
 from termcolor import colored
 from tqdm import tqdm
 
@@ -44,15 +42,11 @@ user_agents = [
 logging.basicConfig(filename="sqlinjfindx.log", level=logging.INFO, 
                     format="%(asctime)s - %(message)s", filemode="w")
 
-# Thread Queue for concurrent scanning
-queue = Queue()
-
-from termcolor import colored
-
 def print_banner():
     banner = r'''
     ========================================
-    sqlinjfindx - SQL Injection Scanner v1.2
+    sqlinjfindx - SQL Injection Scanner v1.3
+            --by root0emir--
 
              _  _           _   __  _             _       
             | |(_)         (_) / _|(_)           | |      
@@ -66,9 +60,8 @@ def print_banner():
     '''
     print(colored(banner, 'green'))
 
-print_banner()
-
-def scan_for_sql_injection(url, method, params, headers, blind=False, verbose=False):
+# Scan for SQL Injection vulnerabilities
+def scan_for_sql_injection(url, method, params, headers, blind=False, verbose=0):
     vulnerable = False
     headers['User-Agent'] = random.choice(user_agents)
     payloads = blind_sql_payloads if blind else sql_payloads
@@ -81,13 +74,12 @@ def scan_for_sql_injection(url, method, params, headers, blind=False, verbose=Fa
             else:
                 response = requests.post(url, data=test_params, headers=headers, timeout=5)
             
-            # Show detailed response in verbose mode
-            if verbose:
+            if verbose >= 1:
                 print(f"Testing {url} with payload: {payload}")
                 print(f"Status Code: {response.status_code}")
                 print(f"Response Time: {response.elapsed.total_seconds()} seconds")
             
-            # Check for SQL errors in the response or long delays for blind SQLi
+            # Check for SQL errors or long delays for blind SQLi
             if re.search(r"(sql syntax|mysql_fetch_array|ORA-01756|error in your SQL syntax|invalid query)", 
                          response.text, re.I) or (blind and response.elapsed.total_seconds() >= 5):
                 print(colored(f"[!] SQL Injection vulnerability found with payload: {payload}", 'red'))
@@ -99,6 +91,7 @@ def scan_for_sql_injection(url, method, params, headers, blind=False, verbose=Fa
             logging.error(f"Request failed for {url}: {e}")
     return vulnerable
 
+# Parse query string for GET parameters
 def parse_query_string(query):
     params = {}
     if "?" in query:
@@ -108,6 +101,7 @@ def parse_query_string(query):
         params[key] = value
     return params
 
+# Worker function to handle scanning of each URL
 def worker(url, method, params, headers, blind, verbose, output_file):
     print(f"Scanning URL: {url} with parameters {params}")
     is_vulnerable = scan_for_sql_injection(url, method, params, headers, blind, verbose)
@@ -115,21 +109,26 @@ def worker(url, method, params, headers, blind, verbose, output_file):
     if is_vulnerable:
         result = {"url": url, "params": params}
         save_result(output_file, result)
-        print(colored(f"-Vulnerability saved to {output_file}", 'green'))
+        print(colored(f"- Vulnerability saved to {output_file}", 'green') if output_file else colored("- Vulnerability displayed on screen", 'green'))
 
+# Save the results to output file
 def save_result(output_file, result):
-    if output_file.endswith(".json"):
-        with open(output_file, "a") as f:
-            json.dump(result, f)
-            f.write("\n")
-    elif output_file.endswith(".csv"):
-        with open(output_file, "a", newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(result.values())
+    if output_file:
+        if output_file.endswith(".json"):
+            with open(output_file, "a") as f:
+                json.dump(result, f)
+                f.write("\n")
+        elif output_file.endswith(".csv"):
+            with open(output_file, "a", newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(result.values())
+        else:
+            with open(output_file, "a") as f:
+                f.write(f"{result}\n")
     else:
-        with open(output_file, "a") as f:
-            f.write(f"{result}\n")
+        print(colored(f"Result:\n{result}", 'green'))
 
+# Handle the interactive mode
 def interactive_menu():
     print(colored("Welcome to sqlinjfindx Interactive Mode", "cyan"))
     url = input("Enter the URL to scan: ")
@@ -143,48 +142,45 @@ def interactive_menu():
     headers = {}
     worker(url, method, parse_query_string(url), headers, blind_sql, verbose_mode, output_file)
 
+# Main program
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="sqlinjfindx - Enhanced SQL Injection Vulnerability Scanner")
     parser.add_argument("url", help="Target URL with parameters (e.g., http://example.com/page?id=1) or a file with URLs")
-    parser.add_argument("-o", "--output", help="File to save results (supports .txt, .json, or .csv)", default="vulnerabilities.txt")
+    parser.add_argument("-o", "--output", help="File to save results (supports .txt, .json, or .csv)", default=None)
     parser.add_argument("-m", "--method", help="HTTP method (GET or POST)", default="GET", choices=["GET", "POST"])
     parser.add_argument("-t", "--timeout", help="Request timeout in seconds", default=5, type=int)
     parser.add_argument("-H", "--header", help="Custom header(s) in key=value format (e.g., Authorization=Bearer token123)", action='append')
-    parser.add_argument("-v", "--verbose", help="Enable verbose output", action="store_true")
+    parser.add_argument("-v", "--verbose", help="Enable verbose output", action="count", default=0)
     parser.add_argument("-b", "--blind", help="Enable Blind SQL Injection scanning", action="store_true")
     parser.add_argument("-T", "--threads", help="Number of threads to use for scanning multiple URLs", default=1, type=int)
     parser.add_argument("-i", "--interactive", help="Start in interactive mode", action="store_true")
     args = parser.parse_args()
 
+    # Print the banner
+    print_banner()
+
     if args.interactive:
         interactive_menu()
     else:
+        headers = {}
+        if args.header:
+            for h in args.header:
+                k, v = h.split("=", 1)
+                headers[k] = v
+        
         url_list = []
-    
-        # Load URLs from file if specified
+        
+        # Support multiple URLs if passed in a file
         if args.url.endswith(".txt"):
             with open(args.url, "r") as f:
                 url_list = f.read().splitlines()
         else:
             url_list = [args.url]
         
-        headers = {}
-        if args.header:
-            for header in args.header:
-                key, value = header.split("=")
-                headers[key] = value
-        
-        for url in url_list:
-            url_base = url.split("?")[0]
-            params = parse_query_string(url)
+        # Use ThreadPoolExecutor for parallel scans
+        with ThreadPoolExecutor(max_workers=args.threads) as executor:
+            for url in url_list:
+                params = parse_query_string(url)
+                executor.submit(worker, url, args.method, params, headers, args.blind, args.verbose, args.output)
 
-            # Threading support for concurrent scanning
-            for _ in range(args.threads):
-                thread = threading.Thread(target=worker, args=(url_base, args.method, params, headers, args.blind, args.verbose, args.output))
-                thread.start()
-                queue.put(thread)
-
-            while not queue.empty():
-                queue.get().join()
-
-        print(colored("***Scanning completed***", 'green'))
+        print(colored("*** Scanning completed ***", 'green'))

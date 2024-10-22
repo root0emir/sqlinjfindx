@@ -4,7 +4,7 @@ import sys
 
 def check_for_updates(current_version):
     
-    latest_version = "1.2"  
+    latest_version = "1.3"  
     return latest_version != current_version
 
 def update_package():
