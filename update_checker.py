@@ -3,20 +3,25 @@ import os
 import sys
 
 def check_for_updates(current_version):
-    
-    latest_version = "1.3"  
+    latest_version = "1.4" 
     return latest_version != current_version
 
-def update_package():
+def update_package(current_version):
     print("Checking for updates...")
-    current_version = "1.2"
+    
     if check_for_updates(current_version):
         print("A new version is available! Updating...")
-        subprocess.call([sys.executable, "setup.py", "sdist", "bdist_wheel"])
-        subprocess.call([sys.executable, "-m", "pip", "install", ".", "--upgrade"])
-        print("Update successful!")
+        try:
+         
+            subprocess.check_call([sys.executable, "setup.py", "sdist", "bdist_wheel"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", ".", "--upgrade"])
+            print("Update successful!")
+        except subprocess.CalledProcessError as e:
+            print(f"An error occurred during the update: {e}")
     else:
         print("You are already on the latest version.")
 
 if __name__ == "__main__":
-    update_package()
+    current_version = "1.3" 
+    update_package(current_version)
+

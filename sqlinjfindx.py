@@ -45,7 +45,7 @@ logging.basicConfig(filename="sqlinjfindx.log", level=logging.INFO,
 def print_banner():
     banner = r'''
     ========================================
-    sqlinjfindx - SQL Injection Scanner v1.3
+    sqlinjfindx - SQL Injection Scanner v1.4
             --by root0emir--
 
              _  _           _   __  _             _       
@@ -144,6 +144,9 @@ def interactive_menu():
 
 # Main program
 if __name__ == "__main__":
+    # Print the banner
+    print_banner()
+
     parser = argparse.ArgumentParser(description="sqlinjfindx - Enhanced SQL Injection Vulnerability Scanner")
     parser.add_argument("url", help="Target URL with parameters (e.g., http://example.com/page?id=1) or a file with URLs")
     parser.add_argument("-o", "--output", help="File to save results (supports .txt, .json, or .csv)", default=None)
@@ -155,9 +158,6 @@ if __name__ == "__main__":
     parser.add_argument("-T", "--threads", help="Number of threads to use for scanning multiple URLs", default=1, type=int)
     parser.add_argument("-i", "--interactive", help="Start in interactive mode", action="store_true")
     args = parser.parse_args()
-
-    # Print the banner
-    print_banner()
 
     if args.interactive:
         interactive_menu()
