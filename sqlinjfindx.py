@@ -111,41 +111,46 @@ def worker(url, method, params, headers, blind, verbose, output_file):
         save_result(output_file, result)
         print(colored(f"- Vulnerability saved to {output_file}", 'green') if output_file else colored("- Vulnerability displayed on screen", 'green'))
 
+import threading
+
+# Create a global lock for file operations
+file_lock = threading.Lock()
+
 # Save the results to output file
 def save_result(output_file, result):
-    # If the output file is provided, save the result
     if output_file:
-        if output_file.endswith(".json"):
-            # Append the result to a JSON file
-            try:
-                with open(output_file, "a") as f:
-                    json.dump(result, f, indent=4)  # Proper formatting for JSON
-                    f.write("\n")  # Ensure a new line after each JSON object
-            except Exception as e:
-                print(colored(f"[!] Error saving to JSON: {e}", 'red'))
+        with file_lock:  # Ensure only one thread writes at a time
+            if output_file.endswith(".json"):
+                # Append the result to a JSON file
+                try:
+                    with open(output_file, "a") as f:
+                        json.dump(result, f, indent=4)  # Proper formatting for JSON
+                        f.write("\n")  # Ensure a new line after each JSON object
+                except Exception as e:
+                    print(colored(f"[!] Error saving to JSON: {e}", 'red'))
 
-        elif output_file.endswith(".csv"):
-            # Append the result to a CSV file
-            try:
-                with open(output_file, "a", newline='') as f:
-                    writer = csv.writer(f)
-                    if f.tell() == 0:  # If file is empty, write headers first
-                        writer.writerow(result.keys())
-                    writer.writerow(result.values())
-            except Exception as e:
-                print(colored(f"[!] Error saving to CSV: {e}", 'red'))
+            elif output_file.endswith(".csv"):
+                # Append the result to a CSV file
+                try:
+                    with open(output_file, "a", newline='') as f:
+                        writer = csv.writer(f)
+                        if f.tell() == 0:  # If file is empty, write headers first
+                            writer.writerow(result.keys())
+                        writer.writerow(result.values())
+                except Exception as e:
+                    print(colored(f"[!] Error saving to CSV: {e}", 'red'))
 
-        else:
-            # For plain text (.txt) or any other format
-            try:
-                with open(output_file, "a") as f:
-                    f.write(f"{result}\n")  # Append each result as a new line
-            except Exception as e:
-                print(colored(f"[!] Error saving to text file: {e}", 'red'))
-
+            else:
+                # For plain text (.txt) or any other format
+                try:
+                    with open(output_file, "a") as f:
+                        f.write(f"{result}\n")  # Append each result as a new line
+                except Exception as e:
+                    print(colored(f"[!] Error saving to text file: {e}", 'red'))
     else:
         # If no output file is provided, just print the result to the screen
         print(colored(f"Result:\n{result}", 'green'))
+
 
 
 # Handle the interactive mode
