@@ -45,7 +45,7 @@ logging.basicConfig(filename="sqlinjfindx.log", level=logging.INFO,
 def print_banner():
     banner = r'''
     ========================================
-    sqlinjfindx - SQL Injection Scanner v1.4
+    sqlinjfindx - SQL Injection Scanner v1.5
             --by root0emir--
 
              _  _           _   __  _             _       

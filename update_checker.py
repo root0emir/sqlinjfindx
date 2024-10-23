@@ -3,7 +3,7 @@ import os
 import sys
 
 def check_for_updates(current_version):
-    latest_version = "1.4" 
+    latest_version = "1.5" 
     return latest_version != current_version
 
 def update_package(current_version):
@@ -22,6 +22,6 @@ def update_package(current_version):
         print("You are already on the latest version.")
 
 if __name__ == "__main__":
-    current_version = "1.3" 
+    current_version = "1.4" 
     update_package(current_version)
 
